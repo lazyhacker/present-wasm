@@ -1,3 +1,76 @@
+// Copyright 2012 The Go Authors.  All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+// +build js
+
+package main
+
+import (
+	"bytes"
+	"html/template"
+	"strings"
+
+	"golang.org/x/tools/present"
+	"lazyhackergo.com/browser"
+)
+
+func main() {
+	present.PlayEnabled = false
+	present.NotesEnabled = false
+
+	// Initialize the slide template.
+	tmpl := present.Template()
+	tmpl = tmpl.Funcs(template.FuncMap{"playable": playable})
+	tmpl.Parse(action_template)
+	tmpl.Parse(slide_template)
+
+	window := browser.GetWindow()
+	storage := window.LocalStorage
+
+	slide := storage.GetItem("preso")
+
+	if len(slide) == 0 {
+		storage.SetItem("preso", default_slides)
+		slide = storage.GetItem("preso")
+	}
+	// convert to a io.Reader
+	reader := strings.NewReader(slide)
+
+	// create an io.Writer for renderer to output to
+	out := new(bytes.Buffer)
+
+	doc, _ := present.Parse(reader, "root", 0)
+	err := doc.Render(out, tmpl)
+	if err != nil {
+		println("error rendering: " + err.Error())
+	}
+
+	w := browser.NewWindow("")
+	w.Document.Open()
+	w.Document.Write(out.String())
+	w.Document.Close()
+}
+
+const default_slides = `
+Title of document
+Subtitle of document
+15:04 2 Jan 2006
+Tags: foo, bar, baz
+
+Author Name
+Job title, Company
+joe@example.com
+http://url/
+@twitter_name
+Some Text
+
+* Title of slide or section (must have asterisk)
+
+Some Text
+`
+
+const slide_template = `
 {/* This is the slide template. It defines how presentations are formatted. */}
 
 {{define "root"}}
@@ -9,7 +82,7 @@
     <script>
       var notesEnabled = {{.NotesEnabled}};
     </script>
-    <script src='/static/slides.js'></script>
+    <script src='static/slides.js'></script>
 
     {{if .NotesEnabled}}
     <script>
@@ -55,7 +128,7 @@
 
   {{range $i, $s := .Sections}}
   <!-- start of slide {{$s.Number}} -->
-      <article {{$s.HTMLAttributes}}>
+      <article>
       {{if $s.Elem}}
         <h3>{{$s.Title}}</h3>
         {{range $s.Elem}}{{elem $.Template .}}{{end}}
@@ -104,3 +177,69 @@
 {{define "newline"}}
 <br>
 {{end}}
+`
+
+const action_template = `
+{/*
+This is the action template.
+It determines how the formatting actions are rendered.
+*/}
+
+{{define "section"}}
+  <h{{len .Number}} id="TOC_{{.FormattedNumber}}">{{.FormattedNumber}} {{.Title}}</h{{len .Number}}>
+  {{range .Elem}}{{elem $.Template .}}{{end}}
+{{end}}
+
+{{define "list"}}
+  <ul>
+  {{range .Bullet}}
+    <li>{{style .}}</li>
+  {{end}}
+  </ul>
+{{end}}
+
+{{define "text"}}
+  {{if .Pre}}
+  <div class="code"><pre>{{range .Lines}}{{.}}{{end}}</pre></div>
+  {{else}}
+  <p>
+    {{range $i, $l := .Lines}}{{if $i}}{{template "newline"}}
+    {{end}}{{style $l}}{{end}}
+  </p>
+  {{end}}
+{{end}}
+
+{{define "code"}}
+  <div class="code{{if playable .}} playground{{end}}" {{if .Edit}}contenteditable="true" spellcheck="false"{{end}}>{{.Text}}</div>
+{{end}}
+
+{{define "image"}}
+<div class="image">
+  <img src="{{.URL}}"{{with .Height}} height="{{.}}"{{end}}{{with .Width}} width="{{.}}"{{end}}>
+</div>
+{{end}}
+
+{{define "video"}}
+<div class="video">
+  <video {{with .Height}} height="{{.}}"{{end}}{{with .Width}} width="{{.}}"{{end}} controls>
+    <source src="{{.URL}}" type="{{.SourceType}}">
+  </video>
+</div>
+{{end}}
+
+{{define "background"}}
+<div class="background">
+  <img src="{{.URL}}">
+</div>
+{{end}}
+
+{{define "iframe"}}
+<iframe src="{{.URL}}"{{with .Height}} height="{{.}}"{{end}}{{with .Width}} width="{{.}}"{{end}}></iframe>
+{{end}}
+
+{{define "link"}}<p class="link"><a href="{{.URL}}" target="_blank">{{style .Label}}</a></p>{{end}}
+
+{{define "html"}}{{.HTML}}{{end}}
+
+{{define "caption"}}<figcaption>{{style .Text}}</figcaption>{{end}}
+`
