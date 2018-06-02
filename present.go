@@ -10,12 +10,54 @@ import (
 	"bytes"
 	"html/template"
 	"strings"
+	"syscall/js"
 
 	"golang.org/x/tools/present"
 	"lazyhackergo.com/browser"
 )
 
 func main() {
+
+	save := js.NewEventCallback(false, false, false, cbSave)
+	defer save.Close()
+
+	present := js.NewEventCallback(false, false, false, cbPresent)
+	defer present.Close()
+
+	window := browser.GetWindow()
+
+	getPresentation()
+
+	window.Document.GetElementById("saveButton").AddEventListener(browser.EventClick, save)
+	window.Document.GetElementById("presentButton").AddEventListener(browser.EventClick, present)
+
+	window.Document.GetElementById("saveButton").SetProperty("disabled", false)
+	window.Document.GetElementById("presentButton").SetProperty("disabled", false)
+	keepalive()
+}
+
+func getPresentation() {
+	window := browser.GetWindow()
+	storage := window.LocalStorage
+
+	v := storage.GetItem("preso")
+
+	m := window.Document.GetElementById("markdown")
+	m.SetValue(v)
+}
+
+func cbSave(e js.Value) {
+
+	window := browser.GetWindow()
+	storage := window.LocalStorage
+
+	v := window.Document.GetElementById("markdown")
+
+	storage.SetItem("preso", v.Value())
+}
+
+func cbPresent(e js.Value) {
+
 	present.PlayEnabled = false
 	present.NotesEnabled = false
 
@@ -50,6 +92,10 @@ func main() {
 	w.Document.Open()
 	w.Document.Write(out.String())
 	w.Document.Close()
+}
+
+func keepalive() {
+	select {}
 }
 
 const default_slides = `
