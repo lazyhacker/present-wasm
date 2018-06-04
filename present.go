@@ -4,11 +4,12 @@
 
 // +build js
 
-package main
+package main // import "lazyhackergo.com/present-wams"
 
 import (
 	"bytes"
 	"html/template"
+	"strconv"
 	"strings"
 	"syscall/js"
 
@@ -40,10 +41,16 @@ func getPresentation() {
 	window := browser.GetWindow()
 	storage := window.LocalStorage
 
-	v := storage.GetItem("preso")
+	slide := storage.GetItem("preso")
+
+	println("length = " + strconv.Itoa(len(slide)))
+	if len(slide) == 0 {
+		storage.SetItem("preso", default_slides)
+		slide = storage.GetItem("preso")
+	}
 
 	m := window.Document.GetElementById("markdown")
-	m.SetValue(v)
+	m.SetValue(slide)
 }
 
 func cbSave(e js.Value) {
@@ -72,10 +79,6 @@ func cbPresent(e js.Value) {
 
 	slide := storage.GetItem("preso")
 
-	if len(slide) == 0 {
-		storage.SetItem("preso", default_slides)
-		slide = storage.GetItem("preso")
-	}
 	// convert to a io.Reader
 	reader := strings.NewReader(slide)
 
