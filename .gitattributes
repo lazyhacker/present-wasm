@@ -1,0 +1,4 @@
+*.wasm linguist-language=Go
+*.js linguist-vendored
+
+
