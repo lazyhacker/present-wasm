@@ -18,10 +18,10 @@ import (
 
 func main() {
 
-	save := js.NewEventCallback(false, false, false, cbSave)
+	save := js.NewEventCallback(js.StopImmediatePropagation, cbSave)
 	defer save.Close()
 
-	present := js.NewEventCallback(false, false, false, cbPresent)
+	present := js.NewEventCallback(js.StopImmediatePropagation, cbPresent)
 	defer present.Close()
 
 	window := browser.GetWindow()
