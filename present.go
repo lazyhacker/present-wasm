@@ -4,7 +4,7 @@
 
 // +build js
 
-package main // import "lazyhackergo.com/present-wams"
+package main // import "lazyhacker.dev/present-wams"
 
 import (
 	"bytes"
@@ -14,7 +14,7 @@ import (
 	"syscall/js"
 
 	"golang.org/x/tools/present"
-	"lazyhackergo.com/browser"
+	"lazyhacker.dev/browser"
 )
 
 func main() {

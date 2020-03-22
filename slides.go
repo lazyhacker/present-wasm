@@ -3,7 +3,7 @@ package main
 import (
 	"syscall/js"
 
-	"lazyhackergo.com/browser"
+	"lazyhacker.dev/browser"
 )
 
 func keepalive() {
